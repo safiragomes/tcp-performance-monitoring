@@ -30,3 +30,12 @@ def collect_cpu():
         "overall": overall_cpu,
         "cores": cores_cpu
     }
+
+# Une as informações de CPU e memória em um único dicionário para ser enviado pelo socket, com o contrato estabelecido no protocolo
+def collect_metrics():
+    # A chave principal deve ser "type" com o valor "METRICS"
+    return {
+        "type": "METRICS",
+        "cpu": collect_cpu(),
+        "memory": collect_memory()
+    }
