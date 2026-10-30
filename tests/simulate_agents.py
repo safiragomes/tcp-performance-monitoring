@@ -43,9 +43,24 @@ def agent_task(agent_id, interval, run_time, die_abruptly=False):
         
         # Loop de envio de métricas durante o run_time
         while time.time() - start_time < run_time:
-            print("A FAZER")
+            # Simulação de "morte abrupta" e dados simulados (Dummy)
+            # Aos 50% do tempo de execução, se ativado, o agente simula uma queda de energia
+            if die_abruptly and (time.time() - start_time) > (run_time / 2):
+                print(f"[Agente {agent_id}] ⚠️ Simulando MORTE ABRUPTA. Silenciando socket sem fechar.")
+                # A thread dorme indefinidamente em vez de enviar dados
+                # Como o socket não foi fechado com '.close()', o servidor vai ter q processar a ausência de dados pelo timeout de 3x o intervalo
+                time.sleep(run_time) 
+                return
 
+            # Cria dados fictícios
+            dummy_metrics = {
+                "type": "METRICS",
+                "cpu": {"overall": 45.5, "cores": [40.0, 50.0, 45.0, 47.0]},
+                "memory": {"total_mb": 16000, "used_mb": 8000, "free_mb": 8000}
+            }
             
+            con.send(dummy_metrics)
+            time.sleep(interval)
             
     except Exception as e:
         print(f"[Agente {agent_id}] Conexão perdida ou erro inesperado: {e}")
