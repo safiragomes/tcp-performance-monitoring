@@ -43,7 +43,7 @@ def agent_task(agent_id, interval, run_time, die_abruptly=False):
         
         # Loop de envio de métricas durante o run_time
         while time.time() - start_time < run_time:
-            # Simulação de "morte abrupta" e dados simulados (Dummy)
+            # Simulação de morte abrupta e dados simulados (Dummy)
             # Aos 50% do tempo de execução, se ativado, o agente simula uma queda de energia
             if die_abruptly and (time.time() - start_time) > (run_time / 2):
                 print(f"[Agente {agent_id}] ⚠️ Simulando MORTE ABRUPTA. Silenciando socket sem fechar.")
