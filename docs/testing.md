@@ -1,10 +1,15 @@
 # Roteiro e Resultados dos Testes — APS 01, Equipe 06
 
 **Disciplina:** CIN0143 — Introdução aos Sistemas Distribuídos e Redes de Computadores  
+
 **Instituição:** Universidade Federal de Pernambuco (UFPE) — Centro de Informática  
+
 **Projeto:** Sistema Distribuído de Monitoramento de Desempenho  
+
 **Responsável pela documentação e execução dos testes:** Lais Saraiva  
+
 **Data dos testes:** 30/10/2026  
+
 **Commit de referência:** `f73f2ac`
 
 ---
@@ -43,14 +48,15 @@ Os testes foram realizados manualmente e por meio de scripts automatizados dispo
 | Formato das mensagens | JSON delimitado por quebra de linha |
 | Endereço do servidor | 127.0.0.1 |
 | Porta dos testes manuais | 5001 |
-| Intervalos utilizados | 3, 4 e 5 segundos |
+| Intervalos utilizados nos testes manuais | 3, 4 e 5 segundos |
+| Intervalo da simulação de estresse | 2 segundos |
 | Ambiente de desenvolvimento | Visual Studio Code |
 | Commit de referência | f73f2ac |
 | Data da execução | 30/10/2026 |
 
 **Observação:** os testes manuais com múltiplos agentes foram executados em terminais diferentes do mesmo computador. Portanto, comprovam a execução simultânea de processos clientes, mas não substituem um teste de comunicação entre computadores físicos distintos.
 
-O commit `f73f2ac` foi registrado como referência do repositório antes do envio das alterações locais da P5. A versão final deverá ser confirmada após o commit e o push dessas alterações.
+O commit `f73f2ac` corresponde à referência inicial do projeto. Os arquivos da P5 foram posteriormente salvos no commit local `7f05257`, na branch `ajustes-finais-aps01`. As correções subsequentes da coleta, do protocolo e do simulador ainda precisam ser registradas em commit e enviadas ao GitHub. O hash final deverá ser atualizado após a integração.
 
 ---
 
@@ -332,10 +338,26 @@ Esse resultado valida o cenário de concorrência implementado no teste, sem con
 | Atualização periódica das métricas | APROVADO |
 | Teste de concorrência com 20 threads | APROVADO |
 | Buffer de 20 leituras por agente | APROVADO |
-| Simulação de 10 agentes por um minuto | NÃO EXECUTADO |
+| Simulação de 10 agentes por um minuto | APROVADO |
 | Comparação direta das métricas com o monitor do macOS | NÃO EXECUTADO |
 | Teste com computadores físicos diferentes | NÃO EXECUTADO |
 | Teste isolado da independência da cópia retornada por snapshot() | NÃO EXECUTADO |
+
+### 7.1. Simulação de estresse com dez agentes
+
+**Comando executado:**
+
+```bash
+python3 tests/simulate_agents.py --port 5001
+```
+
+**Configuração:** dez agentes simulados, duração configurada de 60 segundos, intervalo de 2 segundos entre envios e agente `simulated-agent-3` configurado para ficar silencioso após metade da duração.
+
+**Resultado observado:** os dez agentes foram registrados com sucesso. O painel do servidor exibiu `Agentes conectados: 10`, com métricas simuladas recebidas periodicamente. Depois que o agente 3 interrompeu os envios, o painel passou para `Agentes conectados: 9`, enquanto os demais continuaram ativos. Ao final, o simulador informou `Simulacao encerrada` e o encerramento das conexões.
+
+**Situação: APROVADO.** As métricas desse teste são valores fictícios: ele valida o atendimento simultâneo, o fluxo de mensagens e a remoção por inatividade, mas não a precisão das medições de CPU e RAM.
+
+Esta simulação foi executada **além dos 22 testes e cenários** contabilizados nas seções anteriores.
 
 As verificações não executadas foram registradas separadamente e não foram consideradas aprovadas.
 
@@ -351,15 +373,17 @@ Esses valores representam instantes de tempo, mas podem ser convertidos para o f
 
 ### 8.2. CPU geral e uso por núcleo
 
-Em algumas amostras, a porcentagem de CPU geral apresentada diferiu da média aritmética dos valores exibidos por núcleo.
+Nas medições iniciais, a porcentagem da CPU geral diferiu da média aritmética dos valores exibidos por núcleo porque eram realizadas leituras em momentos distintos.
 
-Recomenda-se revisar a implementação da coleta em `agent/collector.py`, especialmente o intervalo de medição e o cálculo da média, para assegurar correspondência com o requisito do enunciado.
+O arquivo `agent/collector.py` foi atualizado para coletar os percentuais de todos os núcleos em uma única chamada a `psutil.cpu_percent(interval=0.1, percpu=True)` e calcular a média geral a partir desses valores. Após a alteração, a coleta foi executada novamente: CPU geral de **47,9%** para uma lista de dez núcleos cuja média é aproximadamente **47,9%**. Os cinco testes de protocolo e os dez testes de servidor foram reexecutados com sucesso.
+
+A mudança foi validada localmente na branch `ajustes-finais-aps01` e ainda deve ser incluída no commit final desta branch.
 
 ### 8.3. Memória RAM
 
 O painel apresentou informações de memória total, utilizada e livre em MB.
 
-A memória livre não deve ser confundida com a memória disponível, pois os sistemas operacionais podem considerar cache e outros componentes no gerenciamento da memória.
+A coleta foi ajustada para preencher `free_mb` com `psutil.virtual_memory().free`, representando a memória fisicamente livre. No macOS, esse valor pode ser pequeno mesmo quando há memória recuperável de caches. Portanto, **memória fisicamente livre não equivale a memória disponível para novas aplicações**. A alteração foi validada com uma execução de `collect_metrics()`.
 
 ### 8.4. Persistência dos dados
 
@@ -386,6 +410,8 @@ A comunicação entre máquinas físicas distintas não foi testada nesta etapa.
 
 **Resultado geral: todos os 22 testes executados foram aprovados.**
 
+Além dos 22 testes e cenários contabilizados acima, foi concluída **uma simulação adicional de estresse com dez agentes durante 60 segundos**, também aprovada. Essa simulação não altera a contagem dos testes automatizados de protocolo e servidor.
+
 O resultado se refere aos cenários efetivamente realizados, não às verificações adicionais que permaneceram pendentes.
 
 ---
@@ -400,7 +426,7 @@ Também foram observados comportamentos adequados em situações de desconexão,
 
 Os scripts automatizados confirmaram o funcionamento dos mecanismos do protocolo TCP, das validações do servidor, do armazenamento limitado das leituras e da sincronização dos dados compartilhados no cenário de concorrência testado.
 
-Os 22 testes executados foram concluídos com sucesso.
+Os 22 testes e cenários originalmente previstos foram concluídos com sucesso. A simulação adicional com dez agentes também foi concluída com resultado aprovado.
 
 As verificações adicionais ainda não realizadas e os pontos de melhoria identificados permanecem documentados para consulta.
 
@@ -419,4 +445,7 @@ As verificações adicionais ainda não realizadas e os pontos de melhoria ident
 - **Testes automatizados do protocolo:** 5/5
 - **Testes automatizados do servidor:** 10/10
 - **Resultado geral:** 22/22 testes executados aprovados
+- **Simulação adicional de estresse:** 10 agentes, 60 segundos, intervalo de 2 segundos — APROVADA
+- **Commit local com arquivos da P5:** `7f05257`
+- **Branch de correções:** `ajustes-finais-aps01`
 - **Commit final da entrega:** a preencher após o envio ao GitHub

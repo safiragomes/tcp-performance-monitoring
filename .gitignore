@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 venv/
 .venv/server.log
+*.log
+projeto-aps01-revisao.zip

@@ -1,99 +1,218 @@
-# Script que simula estresse com múltiplos clientes concorrentes conectando-se ao servidor
 
+# Simulador de estresse com multiplos agentes TCP concorrentes.
+
+import argparse
 import os
-import sys
-import time
-import threading
 import socket
+import sys
+import threading
+import time
 
-# Garante que a pasta raiz do projeto esteja no Python Path para importar a classe Connection corretamente
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Permite importar os modulos a partir da raiz do projeto.
+sys.path.insert(
+    0,
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+
 from common.protocol import Connection
 
-# Tarefa rodada por cada thread - conecta no servidor, registra-se e envia dados
-def agent_task(agent_id, interval, run_time, die_abruptly=False):
-    # Cria o socket puro
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        # Tenta conectar na porta padrão do servidor
-        sock.connect(('127.0.0.1', 5000))
-    except Exception as e:
-        print(f"[Agente {agent_id}] Falha ao conectar no servidor: {e}")
-        return
 
-    # Envolve o socket na abstração de comunicação requerida
-    con = Connection(sock)
+def agent_task(agent_id, interval, run_time, host, port, die_abruptly=False):
     name = f"simulated-agent-{agent_id}"
 
-    # Implementação do ciclo de vida e troca de mensagens 
+    # Estabelece uma conexao TCP com o servidor.
     try:
-        # Envia a primeira mensagem requisitada pela especificação: REGISTER
-        con.send({"type": "REGISTER", "name": name, "interval": interval})
-        
-        # Aguarda resposta síncrona do servidor
-        response = con.receive()
-        if not response or response.get("type") != "OK":
-            print(f"[Agente {agent_id}] Erro ou rejeição ao registrar. Resposta: {response}")
-            con.close()
-            return
-            
-        print(f"[Agente {agent_id}] Registrado com sucesso! Enviando métricas...")
+        sock = socket.create_connection((host, port), timeout=5)
+    except OSError as e:
+        print(f"[Agente {agent_id}] Falha ao conectar: {e}")
+        return
 
-        start_time = time.time()
-        
-        # Loop de envio de métricas durante o run_time
-        while time.time() - start_time < run_time:
-            # Simulação de morte abrupta e dados simulados (Dummy)
-            # Aos 50% do tempo de execução, se ativado, o agente simula uma queda de energia
-            if die_abruptly and (time.time() - start_time) > (run_time / 2):
-                print(f"[Agente {agent_id}] ⚠️ Simulando MORTE ABRUPTA. Silenciando socket sem fechar.")
-                # A thread dorme indefinidamente em vez de enviar dados
-                # Como o socket não foi fechado com '.close()', o servidor vai ter q processar a ausência de dados pelo timeout de 3x o intervalo
-                time.sleep(run_time) 
+    con = Connection(sock)
+    became_silent = False
+
+    try:
+        # Registra o agente antes de enviar metricas.
+        con.send({
+            "type": "REGISTER",
+            "name": name,
+            "interval": interval
+        })
+
+        response = con.receive()
+
+        if not isinstance(response, dict) or response.get("type") != "OK":
+            print(
+                f"[Agente {agent_id}] Registro recusado. "
+                f"Resposta: {response}"
+            )
+            return
+
+        print(f"[Agente {agent_id}] Registrado com sucesso!")
+
+        start_time = time.monotonic()
+
+        # Envia metricas periodicamente pela mesma conexao TCP.
+        while time.monotonic() - start_time < run_time:
+            elapsed = time.monotonic() - start_time
+
+            # Simula um agente que deixa de enviar mensagens
+            # sem fechar imediatamente a conexao.
+            if die_abruptly and elapsed >= run_time / 2:
+                became_silent = True
+
+                print(
+                    f"[Agente {agent_id}] Simulando agente silencioso. "
+                    "Aguardando deteccao de timeout pelo servidor..."
+                )
+
+                # Mantem o socket aberto por tempo suficiente
+                # para o servidor identificar a inatividade.
+                remaining = run_time - elapsed
+                silence_time = max(remaining, 3 * interval + 1)
+
+                time.sleep(silence_time)
                 return
 
-            # Cria dados fictícios
+            # Dados ficticios usados para testar o servidor.
             dummy_metrics = {
                 "type": "METRICS",
-                "cpu": {"overall": 45.5, "cores": [40.0, 50.0, 45.0, 47.0]},
-                "memory": {"total_mb": 16000, "used_mb": 8000, "free_mb": 8000}
+                "cpu": {
+                    "overall": 45.5,
+                    "cores": [40.0, 50.0, 45.0, 47.0]
+                },
+                "memory": {
+                    "total_mb": 16000,
+                    "used_mb": 8000,
+                    "free_mb": 8000
+                }
             }
-            
-            con.send(dummy_metrics)
-            time.sleep(interval)
-            
-    except Exception as e:
-        print(f"[Agente {agent_id}] Conexão perdida ou erro inesperado: {e}")
-    finally:
-        # Tenta fechar a conexão de forma limpa caso não tenha morrido abruptamente
-        if not die_abruptly:
-            try:
-                con.close()
-                print(f"[Agente {agent_id}] Finalizado e desconectado graciosamente.")
-            except:
-                pass
 
-# Multithreading pra 10 agentes
-if __name__ == "__main__":
-    # Configuração dos critérios de aceite (10 agentes por 1 minuto)
-    NUM_AGENTS = 10
-    RUN_TIME = 60 # Segundos
-    INTERVAL = 2 # Intervalo em que cada agente envia dados em segundos
-    
-    print(f"Iniciando simulação com {NUM_AGENTS} agentes por {RUN_TIME} segundos...")
-    
+            con.send(dummy_metrics)
+
+            # Aguarda o proximo envio sem ultrapassar
+            # desnecessariamente a duracao configurada.
+            remaining = run_time - (time.monotonic() - start_time)
+
+            if remaining > 0:
+                time.sleep(min(interval, remaining))
+
+    except Exception as e:
+        print(f"[Agente {agent_id}] Erro durante a simulacao: {e}")
+
+    finally:
+        # O agente silencioso permanece conectado durante a
+        # espera e somente depois libera os recursos.
+        try:
+            con.close()
+
+            if became_silent:
+                print(f"[Agente {agent_id}] Simulacao de silencio encerrada.")
+            else:
+                print(f"[Agente {agent_id}] Conexao encerrada.")
+
+        except OSError:
+            pass
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Simulador de multiplos agentes TCP"
+    )
+
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Endereco IP do servidor"
+    )
+
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="Porta TCP do servidor"
+    )
+
+    parser.add_argument(
+        "--agents",
+        type=int,
+        default=10,
+        help="Quantidade de agentes simulados"
+    )
+
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=60,
+        help="Duracao da simulacao em segundos"
+    )
+
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=2,
+        help="Intervalo de envio das metricas em segundos"
+    )
+
+    parser.add_argument(
+        "--silent-agent",
+        type=int,
+        default=3,
+        help="ID do agente que ficara silencioso; -1 desativa"
+    )
+
+    args = parser.parse_args()
+
+    if args.agents < 1 or args.duration <= 0 or args.interval <= 0:
+        parser.error(
+            "--agents deve ser positivo e "
+            "--duration e --interval devem ser maiores que zero"
+        )
+
+    if not 0 <= args.port <= 65535:
+        parser.error("--port deve estar entre 0 e 65535")
+
+    print("=" * 60)
+    print("SIMULACAO DE AGENTES TCP - EQUIPE 06")
+    print("=" * 60)
+    print(f"Servidor: {args.host}:{args.port}")
+    print(f"Quantidade de agentes: {args.agents}")
+    print(f"Duracao: {args.duration} segundos")
+    print(f"Intervalo: {args.interval} segundos")
+    print(f"Agente silencioso: {args.silent_agent}")
+    print("=" * 60)
+
     threads = []
-    for i in range(NUM_AGENTS):
-        # O agente de ID 3 vai testar a morte abrupta
-        will_die = (i == 3) 
-        t = threading.Thread(target=agent_task, args=(i, INTERVAL, RUN_TIME, will_die))
+
+    for i in range(args.agents):
+        will_die = (i == args.silent_agent)
+
+        t = threading.Thread(
+            target=agent_task,
+            args=(
+                i,
+                args.interval,
+                args.duration,
+                args.host,
+                args.port,
+                will_die
+            )
+        )
+
         threads.append(t)
         t.start()
 
-        # Pequeno atraso (jitter) para os clientes não baterem no servidor no exato milissegundo
-        time.sleep(0.1) 
-        
+        # Pequeno atraso entre as conexoes.
+        time.sleep(0.1)
+
     for t in threads:
         t.join()
-        
-    print("Simulação concluída. Todos os testes de estresse finalizaram.")
+
+    print("=" * 60)
+    print("Simulacao encerrada.")
+    print("Consulte o painel e os logs para verificar os resultados.")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
