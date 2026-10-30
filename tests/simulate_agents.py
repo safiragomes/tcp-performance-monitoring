@@ -24,3 +24,36 @@ def agent_task(agent_id, interval, run_time, die_abruptly=False):
     # Envolve o socket na abstração de comunicação requerida
     con = Connection(sock)
     name = f"simulated-agent-{agent_id}"
+
+    # Implementação do ciclo de vida e troca de mensagens 
+    try:
+        # Envia a primeira mensagem requisitada pela especificação: REGISTER
+        con.send({"type": "REGISTER", "name": name, "interval": interval})
+        
+        # Aguarda resposta síncrona do servidor
+        response = con.receive()
+        if not response or response.get("type") != "OK":
+            print(f"[Agente {agent_id}] Erro ou rejeição ao registrar. Resposta: {response}")
+            con.close()
+            return
+            
+        print(f"[Agente {agent_id}] Registrado com sucesso! Enviando métricas...")
+
+        start_time = time.time()
+        
+        # Loop de envio de métricas durante o run_time
+        while time.time() - start_time < run_time:
+            print("A FAZER")
+
+            
+            
+    except Exception as e:
+        print(f"[Agente {agent_id}] Conexão perdida ou erro inesperado: {e}")
+    finally:
+        # Tenta fechar a conexão de forma limpa caso não tenha morrido abruptamente
+        if not die_abruptly:
+            try:
+                con.close()
+                print(f"[Agente {agent_id}] Finalizado e desconectado graciosamente.")
+            except:
+                pass
