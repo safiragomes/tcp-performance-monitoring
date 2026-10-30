@@ -21,23 +21,23 @@ O servidor mantém conexões TCP persistentes, identifica cada agente, armazena 
 tcp-performance-monitoring/
 ├── agent/
 │   ├── __init__.py
-│   ├── collector.py        # Coleta de métricas (P2)
-│   └── agent.py            # Agente TCP (P3)
+│   ├── collector.py        # Coleta de métricas
+│   └── agent.py            # Agente TCP
 ├── server/
 │   ├── __init__.py
-│   ├── server.py           # Servidor TCP (P4)
-│   ├── state.py            # Estado dos agentes (P4)
-│   └── dashboard.py        # Painel no terminal (P5)
+│   ├── server.py           # Servidor TCP
+│   ├── state.py            # Estado dos agentes
+│   └── dashboard.py        # Painel no terminal
 ├── common/
 │   ├── __init__.py
-│   └── protocol.py         # Protocolo de comunicação (P1)
+│   └── protocol.py         # Protocolo de comunicação
 ├── tests/
 │   ├── test_protocol.py    # Testes do protocolo
 │   ├── check_server.py     # Testes do servidor e do estado
-│   └── simulate_agents.py  # Simulação de agentes (P2)
+│   └── simulate_agents.py  # Simulação de agentes
 ├── docs/
 │   ├── protocol.md         # Documentação do protocolo
-│   └── testing.md          # Procedimentos e resultados dos testes (P5)
+│   └── testing.md          # Procedimentos e resultados dos testes
 ├── requirements.txt
 └── README.md
 ```
