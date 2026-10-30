@@ -17,3 +17,16 @@ def collect_memory():
         "free_mb": int(mem_info.available / mb_divisor) # available reflete melhor a RAM livre no Gerenciador de Tarefas
     }
 
+# Coleta o uso percentual da CPU
+# Usa um pequeno intervalo (0.1s) para garantir uma leitura precisa do sistema
+def collect_cpu():
+    # Coleta a média geral de uso da CPU (0 a 100%)
+    overall_cpu = psutil.cpu_percent(interval=0.1)
+    
+    # Coleta o percentual individual de cada núcleo/thread
+    cores_cpu = psutil.cpu_percent(interval=0.1, percpu=True)
+    
+    return {
+        "overall": overall_cpu,
+        "cores": cores_cpu
+    }
