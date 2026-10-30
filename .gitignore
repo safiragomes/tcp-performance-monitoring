@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 venv/
-.venv/server.log
+.venv/
 *.log
-projeto-aps01-revisao.zip
+.DS_Store
+projeto-aps01-*.zip

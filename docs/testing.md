@@ -6,7 +6,7 @@
 
 **Projeto:** Sistema Distribuído de Monitoramento de Desempenho  
 
-**Responsável pela documentação e execução dos testes:** Lais Saraiva  
+**Responsável pela documentação e execução dos testes:** Laís Saraiva
 
 **Data dos testes:** 30/10/2026  
 
@@ -56,7 +56,7 @@ Os testes foram realizados manualmente e por meio de scripts automatizados dispo
 
 **Observação:** os testes manuais com múltiplos agentes foram executados em terminais diferentes do mesmo computador. Portanto, comprovam a execução simultânea de processos clientes, mas não substituem um teste de comunicação entre computadores físicos distintos.
 
-O commit `f73f2ac` corresponde à referência inicial do projeto. Os arquivos da P5 foram posteriormente salvos no commit local `7f05257`, na branch `ajustes-finais-aps01`. As correções subsequentes da coleta, do protocolo e do simulador ainda precisam ser registradas em commit e enviadas ao GitHub. O hash final deverá ser atualizado após a integração.
+O commit `f73f2ac` identifica a referência inicial utilizada nos primeiros testes. Os arquivos da P5 foram registrados no commit `7f05257`. A branch `ajustes-finais-aps01`, com as alterações da P5 e as correções subsequentes, foi incorporada à `main` por meio do **Pull Request #3**. O hash mais recente da `main` deve ser consultado no repositório para identificar a versão final da entrega.
 
 ---
 
@@ -377,7 +377,7 @@ Nas medições iniciais, a porcentagem da CPU geral diferiu da média aritmétic
 
 O arquivo `agent/collector.py` foi atualizado para coletar os percentuais de todos os núcleos em uma única chamada a `psutil.cpu_percent(interval=0.1, percpu=True)` e calcular a média geral a partir desses valores. Após a alteração, a coleta foi executada novamente: CPU geral de **47,9%** para uma lista de dez núcleos cuja média é aproximadamente **47,9%**. Os cinco testes de protocolo e os dez testes de servidor foram reexecutados com sucesso.
 
-A mudança foi validada localmente na branch `ajustes-finais-aps01` e ainda deve ser incluída no commit final desta branch.
+A correção foi validada localmente e incorporada à branch `main` por meio do **Pull Request #3**, juntamente com a atualização da documentação do protocolo e do simulador de agentes.
 
 ### 8.3. Memória RAM
 
@@ -435,7 +435,7 @@ As verificações adicionais ainda não realizadas e os pontos de melhoria ident
 ## 11. Registro Final da Execução
 
 - **Data dos testes:** 30/10/2026
-- **Responsável:** Lais Saraiva
+- **Responsável:** Laís Saraiva
 - **Sistema operacional:** macOS
 - **Python:** 3.9.6
 - **psutil:** 7.2.2
@@ -446,6 +446,7 @@ As verificações adicionais ainda não realizadas e os pontos de melhoria ident
 - **Testes automatizados do servidor:** 10/10
 - **Resultado geral:** 22/22 testes executados aprovados
 - **Simulação adicional de estresse:** 10 agentes, 60 segundos, intervalo de 2 segundos — APROVADA
-- **Commit local com arquivos da P5:** `7f05257`
-- **Branch de correções:** `ajustes-finais-aps01`
-- **Commit final da entrega:** a preencher após o envio ao GitHub
+- **Commit com arquivos:** `7f05257`
+- **Branch de correções:** `ajustes-finais-aps01` (incorporada à `main`)
+- **Pull Request integrado à `main`:** #3
+- **Commit mais recente da `main` na entrega:** consultar com `git rev-parse --short HEAD` após atualizar a `main` local
