@@ -448,5 +448,9 @@ As verificações adicionais ainda não realizadas e os pontos de melhoria ident
 - **Simulação adicional de estresse:** 10 agentes, 60 segundos, intervalo de 2 segundos — APROVADA
 - **Commit com arquivos:** `7f05257`
 - **Branch de correções:** `ajustes-finais-aps01` (incorporada à `main`)
-- **Pull Request integrado à `main`:** #3
-- **Commit mais recente da `main` na entrega:** consultar com `git rev-parse --short HEAD` após atualizar a `main` local
+- **Pull Requests integrados à `main`:**
+  - PR #1 — Implementa o agente de monitoramento.
+  - PR #2 — Feat/server.
+  - PR #3 — Ajustes finais da APS 01.
+  - PR #4 — Correções finais da documentação.
+- **Commit da `main` na última conferência:** `6cd8a00` — para verificar o commit mais recente, execute `git pull --ff-only origin main` e depois `git rev-parse --short HEAD`.
