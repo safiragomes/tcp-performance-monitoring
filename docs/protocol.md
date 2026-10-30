@@ -1,65 +1,114 @@
-# Protocolo agente ↔ servidor
+# Protocolo de comunicação — APS 01, Equipe 06
 
-- Transporte: TCP, porta padrão **5000**.
-- Formato: uma mensagem JSON por linha, terminada em `\n`, codificada em UTF-8.
-- Implementação: `comum/protocolo.py` (classe `Conexao`).
+## Visão geral
 
-## Fluxo
+O sistema utiliza **sockets TCP** para comunicação entre os agentes e o servidor de monitoramento.
 
-1. O agente conecta e envia **REGISTER**.
-2. O servidor responde **OK** ou **ERRO**. Em caso de ERRO, fecha a conexão.
-3. Depois do OK, o agente envia **METRICAS** a cada `intervalo` segundos.
-4. Se o servidor ficar 3 × `intervalo` sem receber nada, considera o agente
-   desconectado e o remove da lista.
+- **Transporte:** TCP.
+- **Porta padrão:** `5000`, configurável por meio do argumento `--port`. Nos testes manuais da equipe foi usada a porta `5001`.
+- **Codificação:** UTF-8.
+- **Formato:** uma mensagem JSON por linha, terminada em `\n` (JSON Lines).
+- **Implementação:** `common/protocol.py`, classe `Connection`, com os métodos `send()`, `receive()` e `close()`.
+- **Persistência:** o mesmo socket é utilizado para o registro e os envios periódicos de métricas até a desconexão.
+
+## Fluxo da comunicação
+
+1. O agente abre uma conexão TCP com o servidor.
+2. A primeira mensagem do agente deve ser `REGISTER`, informando um nome único e o intervalo de envio.
+3. O servidor valida o registro e responde com `OK` ou `ERROR`.
+4. Após `OK`, o agente envia mensagens `METRICS` pela mesma conexão TCP no intervalo configurado.
+5. O servidor guarda as últimas 20 leituras por agente em memória e atualiza o painel.
+6. Se a conexão for encerrada, o agente é removido do estado do servidor.
+7. Se um agente registrado ficar sem enviar mensagens por **3 vezes seu intervalo**, o servidor encerra a conexão, envia `ERROR` com motivo `timeout` quando possível e remove o agente.
+
+O servidor também aplica um timeout inicial de **10 segundos** para receber o `REGISTER` (valor padrão de `REGISTER_TIMEOUT`).
 
 ## Mensagens
 
-### REGISTER (agente → servidor)
-Sempre a primeira mensagem da conexão.
+### 1. REGISTER — agente para servidor
+
+Deve ser a primeira mensagem da conexão.
 
 ```json
-{"tipo": "REGISTER", "nome": "agente-ana", "intervalo": 5}
+{"type": "REGISTER", "name": "agente-01", "interval": 5}
 ```
 
 | Campo | Tipo | Descrição |
 |---|---|---|
-| nome | texto | Nome único do agente (padrão: hostname) |
-| intervalo | número > 0 | Segundos entre os envios de METRICAS |
+| `type` | texto | Deve ser `REGISTER`. |
+| `name` | texto não vazio | Nome único do agente. No cliente, o padrão é o hostname da máquina. |
+| `interval` | número positivo | Intervalo de envio em segundos. |
 
-### OK / ERRO (servidor → agente)
-Resposta ao REGISTER.
+### 2. OK — servidor para agente
+
+Confirma que o registro foi aceito.
 
 ```json
-{"tipo": "OK"}
-{"tipo": "ERRO", "motivo": "nome ja em uso"}
+{"type": "OK"}
 ```
 
-### METRICAS (agente → servidor)
-Enviada a cada intervalo, depois do registro. O servidor associa a mensagem à
-conexão, então o nome não é repetido.
+### 3. ERROR — servidor para agente
+
+Indica registro recusado ou timeout.
 
 ```json
-{"tipo": "METRICAS",
- "cpu": {"geral": 23.5, "nucleos": [20.1, 30.4, 18.0, 26.2]},
- "mem": {"total_mb": 16000, "usada_mb": 8200, "livre_mb": 7800}}
+{"type": "ERROR", "reason": "name already in use"}
+```
+
+Outros motivos previstos na implementação:
+
+```json
+{"type": "ERROR", "reason": "invalid REGISTER"}
+```
+
+```json
+{"type": "ERROR", "reason": "timeout"}
+```
+
+Se um registro for inválido ou usar um nome já registrado, o servidor responde com `ERROR` e encerra aquela conexão. Uma mensagem `METRICS` inválida recebida **após o registro** é ignorada, sem necessariamente derrubar o agente.
+
+### 4. METRICS — agente para servidor
+
+Enviada periodicamente após o registro.
+
+```json
+{
+  "type": "METRICS",
+  "cpu": {
+    "overall": 23.5,
+    "cores": [20.1, 30.4, 18.0, 25.5]
+  },
+  "memory": {
+    "total_mb": 16000,
+    "used_mb": 8200,
+    "free_mb": 7800
+  }
+}
 ```
 
 | Campo | Tipo | Descrição |
 |---|---|---|
-| cpu.geral | número | % de uso médio da CPU (0 a 100) |
-| cpu.nucleos | lista de números | % de uso de cada núcleo |
-| mem.total_mb | inteiro | Memória total em MB |
-| mem.usada_mb | inteiro | Memória usada em MB |
-| mem.livre_mb | inteiro | Memória disponível em MB |
+| `type` | texto | Deve ser `METRICS`. |
+| `cpu.overall` | número | Percentual geral de uso da CPU. |
+| `cpu.cores` | lista de números | Percentual de utilização por núcleo lógico. |
+| `memory.total_mb` | número | Memória RAM total em MB. |
+| `memory.used_mb` | número | Memória RAM utilizada em MB. |
+| `memory.free_mb` | número | Memória RAM fisicamente livre em MB. |
 
-## Como usar no código
+O nome do agente não precisa ser repetido em cada `METRICS`, pois o servidor associa as leituras à conexão registrada.
+
+## Exemplo de uso da classe Connection
 
 ```python
-from comum.protocolo import Conexao
+from common.protocol import Connection
 
-con = Conexao(sock)
-con.enviar({"tipo": "OK"})
-msg = con.receber()      # dicionário, ou None se o outro lado fechou
+con = Connection(sock)
+con.send({"type": "REGISTER", "name": "agente-01", "interval": 5})
+resposta = con.receive()
+# Resposta esperada para um registro aceito: {"type": "OK"}
+con.close()
 ```
 
-Cada socket deve ter **uma única** `Conexao`, porque ela guarda o buffer.
+O método `send()` serializa um objeto Python como JSON UTF-8 e acrescenta a quebra de linha. O método `receive()` mantém um buffer interno para lidar com mensagens TCP fragmentadas ou múltiplas mensagens recebidas juntas, retornando `None` quando a outra extremidade fecha normalmente a conexão.
+
+**Importante:** cada socket deve ser encapsulado por apenas uma instância de `Connection`, pois ela mantém o buffer de leitura da conexão.
