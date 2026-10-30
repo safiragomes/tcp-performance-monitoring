@@ -1,4 +1,4 @@
-# Script que simula múltiplos clientes concorrentes conectando-se ao servidor
+# Script que simula estresse com múltiplos clientes concorrentes conectando-se ao servidor
 
 import os
 import sys
@@ -72,3 +72,28 @@ def agent_task(agent_id, interval, run_time, die_abruptly=False):
                 print(f"[Agente {agent_id}] Finalizado e desconectado graciosamente.")
             except:
                 pass
+
+# Multithreading pra 10 agentes
+if __name__ == "__main__":
+    # Configuração dos critérios de aceite (10 agentes por 1 minuto)
+    NUM_AGENTS = 10
+    RUN_TIME = 60 # Segundos
+    INTERVAL = 2 # Intervalo em que cada agente envia dados em segundos
+    
+    print(f"Iniciando simulação com {NUM_AGENTS} agentes por {RUN_TIME} segundos...")
+    
+    threads = []
+    for i in range(NUM_AGENTS):
+        # O agente de ID 3 vai testar a morte abrupta
+        will_die = (i == 3) 
+        t = threading.Thread(target=agent_task, args=(i, INTERVAL, RUN_TIME, will_die))
+        threads.append(t)
+        t.start()
+
+        # Pequeno atraso (jitter) para os clientes não baterem no servidor no exato milissegundo
+        time.sleep(0.1) 
+        
+    for t in threads:
+        t.join()
+        
+    print("Simulação concluída. Todos os testes de estresse finalizaram.")
