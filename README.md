@@ -147,10 +147,9 @@ Os procedimentos, os resultados e as verificações ainda não realizadas estão
 
 ## Integrantes e responsabilidades
 
-- **Pessoa 1:** protocolo TCP e documentação do protocolo.
-- **Pessoa 2:** coleta das métricas e simulação de agentes.
-- **Pessoa 3:** desenvolvimento do agente TCP.
-- **Pessoa 4:** servidor TCP e armazenamento em memória.
-- **Pessoa 5 — Laís Saraiva:** painel de monitoramento, documentação de uso e registro dos testes.
+- **Safira Moraes:** protocolo TCP e documentação do protocolo.
+- **Leticia Staundiger:** coleta das métricas e simulação de agentes.
+- **Laura Fonseca:** desenvolvimento do agente TCP.
+- **Marcos Silva:** servidor TCP e armazenamento em memória.
+- **Laís Saraiva:** painel de monitoramento, documentação de uso e registro dos testes.
 
-> Antes da entrega, substituir “Pessoa 1” a “Pessoa 4” pelos nomes dos integrantes correspondentes e conferir a documentação com a versão final do código.
