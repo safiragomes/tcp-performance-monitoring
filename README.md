@@ -39,6 +39,7 @@ tcp-performance-monitoring/
 │   ├── protocol.md         # Documentação do protocolo
 │   └── testing.md          # Procedimentos e resultados dos testes
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
 
@@ -134,7 +135,21 @@ Também foram executados **7 cenários de aceitação**, incluindo um agente, tr
 
 **Resumo:** 22 testes/cenários executados e aprovados (7 manuais e 15 automatizados).
 
-Os procedimentos, os resultados e as verificações ainda não realizadas estão documentados em [`docs/testing.md`](docs/testing.md). O arquivo `tests/simulate_agents.py` está presente no projeto, mas a simulação de dez agentes por um minuto não foi executada nesta validação.
+### Simulação de estresse com dez agentes
+
+Com o servidor iniciado na porta `5001`, executar em outro terminal:
+
+```bash
+python3 tests/simulate_agents.py --port 5001
+```
+
+**Configuração executada:** 10 agentes simultâneos, duração de 60 segundos e intervalo de 2 segundos entre mensagens. O `simulated-agent-3` interrompe o envio de métricas após metade da simulação, para permitir a verificação do timeout.
+
+**Resultado observado:** os dez agentes foram registrados, o painel mostrou dez clientes conectados e, após a inatividade do agente 3, passou a mostrar nove. A simulação foi concluída, com encerramento das conexões ao final.
+
+As métricas enviadas pelo simulador são **fictícias**; esse teste verifica conexões simultâneas, troca de mensagens e remoção por inatividade, não a precisão dos valores medidos.
+
+Os procedimentos detalhados, os 22 testes/cenários anteriores e os testes adicionais estão documentados em [`docs/testing.md`](docs/testing.md).
 
 ## Limitações e observações
 
@@ -143,7 +158,8 @@ Os procedimentos, os resultados e as verificações ainda não realizadas estão
 - Os testes com múltiplos agentes foram realizados em processos separados **no mesmo computador**, não em máquinas físicas diferentes.
 - O protocolo não implementa mecanismos próprios de autenticação ou criptografia; o projeto é destinado a demonstrações acadêmicas em ambientes confiáveis.
 - A reconexão automática de agentes após a reinicialização do servidor não foi validada.
-- Recomenda-se revisar a correspondência entre o valor da CPU geral e as medições por núcleo em `agent/collector.py`, conforme observação registrada nos testes.
+- A CPU geral é calculada como a média dos percentuais dos núcleos lógicos obtidos em uma única amostragem de `psutil.cpu_percent(interval=0.1, percpu=True)`.
+- O campo `free_mb` representa memória fisicamente livre (`psutil.virtual_memory().free`), que é diferente da memória disponível para aplicações (`available`).
 
 ## Integrantes e responsabilidades
 
