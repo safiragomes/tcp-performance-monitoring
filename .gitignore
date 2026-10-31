@@ -4,4 +4,3 @@ venv/
 .venv/
 *.log
 .DS_Store
-projeto-aps01-*.zip
